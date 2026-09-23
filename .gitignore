@@ -1,4 +1,6 @@
 data/
 .ipynb_checkpoints/
 __pycache__/
+*backup*.ipynb
+*copy*.ipynb
 
