@@ -5,7 +5,7 @@
 
 ---
 
-## 🎵 ¿De qué trata este proyecto?
+## ¿De qué trata este proyecto?
 
 En este repositorio presento mi entrega del examen final del curso de **Machine Learning Supervisado**. El reto consiste en construir un sistema capaz de predecir a qué género musical pertenece una canción utilizando únicamente sus características acústicas y timbrales (extraídas del *Million Song Dataset* de Columbia LabROSA).
 
@@ -20,7 +20,7 @@ Para que el modelo realmente aprenda patrones musicales y no memorice "atajos" (
 
 ---
 
-## 💡 Enfoque y Metodología
+## Enfoque y Metodología
 
 Para cumplir con todos los criterios de evaluación de la rúbrica, estructuré el trabajo de la siguiente manera:
 
@@ -34,37 +34,46 @@ Para cumplir con todos los criterios de evaluación de la rúbrica, estructuré 
    * Apliqué estandarización (`StandardScaler`) ajustando los parámetros **únicamente** con el conjunto de entrenamiento para evitar fuga de información (*data leakage*).
 
 2. **Entrenamiento de Modelos y Diagnóstico (10%):**
-   * Evalué 6 modelos de diferentes familias supervisadas:
+   * Evalué 4 familias representativas de algoritmos supervisados con diferente sesgo inductivo:
      * Regresión Logística Multinomial ($L_2$)
-     * Linear Support Vector Classifier (LinearSVC)
-     * Random Forest
-     * Extra Trees
-     * HistGradientBoosting (GBDT basado en histogramas)
+     * Random Forest Classifier
+     * Extreme Gradient Boosting (XGBoost)
      * Red Neuronal Perceptrón Multicapa (MLP)
-   * Generé **Curvas de Aprendizaje (*Learning Curves*)** para verificar que los modelos no tuvieran problemas de subajuste (*underfitting*) y que la varianza estuviera controlada al aumentar las muestras de entrenamiento.
+   * Diagnostiqué la velocidad de cómputo y la brecha de sobreajuste (*overfitting*), identificando a **XGBoost** como el clasificador más certero y eficiente (71.67% de Macro F1 en validación en tan solo 1.39 segundos).
 
 3. **Selección y Regularización (20%):**
-   * Utilicé **Validación Cruzada Estratificada de 5 particiones (5-Fold CV)** sobre el conjunto de entrenamiento.
-   * Analicé el impacto de los parámetros de regularización con **Curvas de Validación (*Validation Curves*)** (penalización $L_2$ de hojas en Gradient Boosting, profundidad máxima en Random Forest e inversa de regularización $C$ en modelos lineales).
-   * Construí un **Ensamble de Votación Suave (*Soft-Voting Ensemble*)** que combina las probabilidades predichas por HistGradientBoosting, Random Forest y Extra Trees, logrando la menor pérdida logarítmica y el mejor rendimiento global.
+   * Unifiqué los conjuntos de entrenamiento y validación (80% del total, 15,799 muestras) para maximizar el aprendizaje en validación cruzada.
+   * Utilicé **Validación Cruzada Estratificada de 5 particiones (5-Fold Stratified CV)** con `scoring='f1_macro'`.
+   * Realicé búsqueda en malla con `GridSearchCV` sobre parámetros de regularización estocástica y estructural de XGBoost (`subsample: 0.8`, `max_depth: 6`, `n_estimators: 150`, `learning_rate: 0.1`), logrando un salto cuantitativo de **71.67% a 73.01%** en Macro F1.
 
 4. **Calidad del Modelo y Desempeño Futuro (20%):**
-   * **Criterio de desempeño justificado:** Elegí **Macro F1-Score** y **Balanced Accuracy** como métricas principales. Como existe un desbalance moderado entre géneros (desde 2,103 canciones en Metal hasta 4,935 en Dance), el Macro F1 trata a todas las clases con la misma importancia y evita que un modelo "tramposo" obtenga un falso buen puntaje a costa de descuidar los géneros minoritarios.
-   * **¿Qué esperamos en datos futuros?** Evalué el modelo en el conjunto de prueba ciego y apliqué **Bootstrapping no paramétrico con 1,000 réplicas** para calcular un intervalo de confianza al 95%:
-     * **Macro F1 esperado:** **73.28%** (IC 95%: [71.62%, 74.88%])
-     * **Balanced Accuracy esperada:** **73.54%** (IC 95%: [71.89%, 75.14%])
-     * **Accuracy global esperada:** **73.11%** (IC 95%: [71.49%, 74.72%])
+   * **Criterio de desempeño justificado:** Elegí **Macro F1-Score** y **Balanced Accuracy** como métricas principales debido al desbalance entre clases (2.35:1).
+   * **Evaluación en prueba ciega final ($N = 2,789$):**
+     * **Exactitud Global (Accuracy):** **73.54%**
+     * **Exactitud Balanceada (Balanced Acc):** **73.23%**
+     * **Macro F1-Score:** **73.94%**
+     * **Macro-promedio ROC AUC:** **0.9318** (Metal: 0.9663, Jazz: 0.9408, Punk: 0.9281, Soul: 0.9193, Dance: 0.9033).
+   * **¿Qué esperamos en datos futuros?** Apliqué **Bootstrapping no paramétrico con 1,000 réplicas** en el conjunto de prueba para construir intervalos de confianza al 95%:
+     * **Macro F1 esperado:** **73.95%** (IC 95%: [72.34%, 75.54%], error estándar: 0.0084).
+     * **Balanced Accuracy esperada:** **73.25%** (IC 95%: [71.60%, 74.92%], error estándar: 0.0087).
+     * **Accuracy global esperada:** **73.57%** (IC 95%: [71.96%, 75.19%], error estándar: 0.0081).
 
 5. **Análisis de Resultados y Música (20%):**
-   * **¿Qué géneros se confunden más?**
-     * **Metal vs Punk:** Tienen una confusión mutua de alrededor del 12-15%. Tiene todo el sentido acústico: ambos usan guitarras con distorsión pesada (armónicos altos saturados en los timbres 2 y 4), ritmos rápidos en compás de 4/4 y niveles de volumen muy comprimidos (`loudness` entre -6 y -8 dB).
-     * **Jazz/Blues vs Soul/Reggae:** Comparten un 10-14% de confusión debido a sus raíces afroamericanas compartidas, instrumentación acústica (vientos, metales, pianos eléctricos cálidos) y un rango dinámico más amplio que la música comercial moderna.
-     * **Dance/Electronica:** Es el género más fácil de identificar (~81% de F1), ya que sus bombos sintetizados continuos de baja frecuencia y su tempo perfectamente cuantizado generan una firma tímbrica única.
-   * **Variables más importantes:** A través de *Permutation Importance*, encontré que la sonoridad global (`loudness`), la energía y brillo tímbrico (`avg_timbre1`, `avg_timbre2`), y la variabilidad dinámica (`var_timbre1`) son las que más mueven la aguja a la hora de predecir.
+   * **¿Qué géneros se confunden más en la Matriz de Confusión?**
+     * **Metal vs Punk (13.3%):** Confusión mutua por compartir guitarras saturadas de alta ganancia, compases de 4/4 acelerados y máxima compresión dinámica.
+     * **Jazz/Blues vs Soul/Reggae (~10%):** Confusión por su raíz común en la música negra, instrumentación de vientos (saxos, trompetas) y calidez armónica.
+     * **Dance vs Soul/Reggae (~12.5%):** Por el uso intensivo de samples vocales y ritmos funk/reggae en la música electrónica de club.
+     * **Polos opuestos:** La confusión entre Metal y Jazz es de apenas 1.9%, confirmando la coherencia musical del modelo.
+   * **Variables más críticas (Permutación en Test):**
+     * `avg_timbre6` (Balance y amplitud espectral): **-0.0949** en Macro F1.
+     * `duration` (Duración de la pista): **-0.0744** en Macro F1 (canciones breves de Punk vs temas extensos de Jazz/Dance).
+     * `avg_timbre5` (Armónicos centrales): **-0.0492**.
+     * `loudness` (Volumen / compresión): **-0.0478**.
+     * **El mito del ritmo:** El `tempo` (BPM) apenas pesó un 3.8% y no entró al Top 8, demostrando que el género musical lo define el timbre instrumental y no la velocidad.
 
 ---
 
-## 📁 Estructura del Repositorio
+## Estructura del Repositorio
 
 ```text
 ├── context/
@@ -77,7 +86,7 @@ Para cumplir con todos los criterios de evaluación de la rúbrica, estructuré 
 
 ---
 
-## 🚀 ¿Cómo reproducir los experimentos?
+## ¿Cómo reproducir los experimentos?
 
 Todo el código está pensado para ejecutarse de forma limpia y reproducible en Python 3.10 o superior.
 
@@ -105,7 +114,7 @@ python generate_exam_notebook.py
 
 ---
 
-## 📝 Conclusiones Personales
+## Conclusiones Personales
 
 Trabajar con este dataset muestra que clasificar audio musical a nivel de pistas completas usando solo promedios y varianzas de timbre es un problema complejo: el límite de rendimiento para modelos clásicos ronda el 73-75% de Macro F1. Esto se debe a que la música no vive en "cajas cerradas"; muchos temas son fusiones (como punk-metal o jazz-funk). Para un paso siguiente en producción, sería muy interesante trabajar con espectrogramas de Mel en dos dimensiones y arquitecturas convolucionales o de atención (Transformers), o bien plantear el problema como clasificación multietiqueta (*multi-label*).
 
